@@ -2,17 +2,31 @@
 @tailwind components;
 @tailwind utilities;
 
+
+/* Global Tooltip Styles */
+@layer components {
+  .MuiTooltip-tooltip {
+    background-color: transparent;
+    color: white;
+    box-shadow: none;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+  }
+}
+
+
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #171717; 
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #121212; 
+    --foreground: #e0e0e0; 
   }
 }
+
 
 body {
   color: var(--foreground);
