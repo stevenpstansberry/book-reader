@@ -180,7 +180,10 @@ const VoiceSettings: React.FC<VoiceSettingsProps> = ({
 
       {/* Select Voice button */}
       <button
-        onClick={() => onSelectVoice(currentVoice.value)}
+        onClick={() => {
+          onSelectVoice(currentVoice.value);
+          if (onClose) onClose(); // Close the overlay after selecting the voice
+        }}
         className={`${buttonClasses} self-center`}
       >
         Select Voice

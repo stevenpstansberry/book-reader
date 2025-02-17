@@ -31,6 +31,10 @@ export default function Home() {
   const handleOpenSettings = () => setShowSettings(true);
   const handleCloseSettings = () => setShowSettings(false);
 
+  // Find the selected voice object for display
+  const selectedVoiceObject =
+    VOICES.find((voice) => voice.value === selectedVoice) || VOICES[0];
+
   const resetProcess = () => {
     setPdfUrl(null);
     setPdfText({});
@@ -163,18 +167,45 @@ export default function Home() {
           )
         ) : (
           <>
+            {/* 
+              Instead of a box, we display "chips" or "badges" for each setting. 
+              Use a flex container, and each setting is an inline-flex badge. 
+            */}
+            <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
+              {/* Voice */}
+              <div className="inline-flex items-center bg-lime-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
+                Voice: {selectedVoiceObject.name}
+              </div>
+              {/* Accent */}
+              <div className="inline-flex items-center bg-lime-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
+                Accent: {selectedVoiceObject.accent}
+              </div>
+              {/* Language */}
+              <div className="inline-flex items-center bg-lime-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
+                Language: {selectedVoiceObject.language}
+              </div>
+              {/* Speed */}
+              <div className="inline-flex items-center bg-lime-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
+                Speed: {speed.toFixed(2)}
+              </div>
+              {/* Temperature */}
+              <div className="inline-flex items-center bg-lime-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
+                Temperature: {temperature.toFixed(2)}
+              </div>
+            </div>
+
             <Dropzone onFileUploaded={handleFileUpload} onTextExtracted={handleTextExtracted} />
             <button
               onClick={handleOpenSettings}
-              className="inline-flex items-center space-x-2 px-4 py-2 rounded-md bg-lime-600 text-white font-semibold hover:bg-lime-700 transition-colors"
-              >
+              className="inline-flex items-center space-x-2 px-4 py-2 rounded-md bg-lime-600 text-white font-semibold hover:bg-lime-700 transition-colors mt-4"
+            >
               Customize Your Voice Playback
             </button>
-
           </>
         )}
       </div>
 
+      {/* Overlay for Voice Settings */}
       {showSettings && (
         <div
           className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
@@ -187,7 +218,7 @@ export default function Home() {
             onSpeedChange={setSpeed}
             temperature={temperature}
             onTemperatureChange={setTemperature}
-            onClose={handleCloseSettings} // Pass the close function
+            onClose={handleCloseSettings}
           />
         </div>
       )}
