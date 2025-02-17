@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback, useEffect } from "react";
 import Dropzone from "../components/Dropzone";
+import ProgressBar from "../components/ProgressBar";
 import PDFViewer from "../components/PDFViewer";
 import AudioControl from "../components/AudioControl";
 import { fetchTextToSpeech } from "../api/API";
@@ -18,17 +19,29 @@ export default function Home() {
   const [generatingAudio, setGeneratingAudio] = useState<boolean>(false);
   const [audioProgress, setAudioProgress] = useState<number>(0);
 
+  // Incremental progress function
+  const simulateProgress = (setProgress: React.Dispatch<React.SetStateAction<number>>, onComplete: () => void) => {
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += Math.floor(Math.random() * 10) + 5;
+      if (progress >= 100) {
+        progress = 100;
+        clearInterval(interval);
+        onComplete();
+      }
+      setProgress(progress);
+    }, 300);
+  };
+
   // Handle file upload
   const handleFileUpload = useCallback((fileUrl: string) => {
     setUploading(true);
-    setUploadProgress(50); // Simulating some progress
-    setTimeout(() => {
+    simulateProgress(setUploadProgress, () => {
       setPdfUrl(fileUrl);
       setPdfName(fileUrl.split("/").pop() || "Unknown PDF");
       setCurrentPage(1);
-      setUploadProgress(100);
-      setTimeout(() => setUploading(false), 500);
-    }, 1500);
+      setUploading(false);
+    });
   }, []);
 
   // Handle text extraction and generate audio for all pages
@@ -84,22 +97,10 @@ export default function Home() {
   return (
     <div className="flex flex-col justify-center items-center h-screen">
       {uploading ? (
-        <div className="flex flex-col items-center p-6 bg-gray-200 rounded-lg shadow-lg">
-          <p className="text-lg font-semibold mb-2">Uploading PDF...</p>
-          <p className="text-blue-600 font-bold">{uploadProgress}% Uploaded</p>
-          <div className="w-64 bg-gray-300 h-4 rounded-full mt-2">
-            <div className="bg-blue-600 h-full rounded-full transition-all" style={{ width: `${uploadProgress}%` }}></div>
-          </div>
-        </div>
+        <ProgressBar label="Uploading PDF..." progress={uploadProgress} />
       ) : pdfUrl ? (
         generatingAudio ? (
-          <div className="flex flex-col items-center p-6 bg-gray-200 rounded-lg shadow-lg">
-            <p className="text-lg font-semibold mb-2">{pdfName}</p>
-            <p className="text-blue-600 font-bold">{audioProgress}% Audio Processed</p>
-            <div className="w-64 bg-gray-300 h-4 rounded-full mt-2">
-              <div className="bg-blue-600 h-full rounded-full transition-all" style={{ width: `${audioProgress}%` }}></div>
-            </div>
-          </div>
+          <ProgressBar label={`Generating Audio for ${pdfName}`} progress={audioProgress} />
         ) : (
           <>
             <PDFViewer fileUrl={pdfUrl} onPageChange={setCurrentPage} />
