@@ -145,7 +145,7 @@ export default function AudioControl({ audioCache, currentPage }: AudioControlPr
 
   return (
     <div className="flex flex-col items-center justify-center">
-      {/* Controls Container (dark theme, some spacing) */}
+      {/* Controls Container  */}
       <div
         className="
           flex items-center justify-center

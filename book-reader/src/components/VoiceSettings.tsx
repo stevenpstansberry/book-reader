@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 // Material UI icons
 import KeyboardArrowLeftIcon from "@mui/icons-material/KeyboardArrowLeft";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
-import CloseIcon from "@mui/icons-material/Close";
 
 interface VoiceSettingsProps {
   selectedVoice: string;
@@ -77,14 +76,14 @@ export const VOICES = [
   },
 ];
 
-// Shared button classes for consistency
+// Button style for voice settings
 const buttonClasses = `
   px-4 py-2
-  bg-lime-500 hover:bg-lime-600
-  text-black font-medium
+  bg-lime-600 hover:bg-lime-700
+  text-white font-medium
   rounded
-  flex items-center justify-center
   transition-colors duration-200
+  inline-flex items-center justify-center
 `;
 
 const VoiceSettings: React.FC<VoiceSettingsProps> = ({
@@ -118,28 +117,34 @@ const VoiceSettings: React.FC<VoiceSettingsProps> = ({
   return (
     <div
       className="
-        relative p-6 w-full max-w-xl
-        bg-gray-800 text-gray-100
-        flex flex-col space-y-4
-        rounded-md shadow-lg
+        relative w-full max-w-xl mx-auto 
+        p-6 mt-4 
+        rounded-md 
+        bg-gray-900 text-gray-100
+        shadow-lg
       "
       onClick={(e) => e.stopPropagation()}
     >
-      {/* Top left cancel icon */}
-      {onClose && (
-        <button
-          onClick={onClose}
-          className="absolute top-2 left-2 text-gray-100 hover:text-gray-300"
-        >
-          <CloseIcon fontSize="small" />
-        </button>
-      )}
 
-      {/* Custom dark-mode styles for the audio element */}
+      <h2 className="text-xl font-bold mb-3 text-center">Select a Voice</h2>
+
+      {/* Voice name / style / accent / language */}
+      <div className="text-center mb-4">
+        <span className="block text-2xl font-bold">{currentVoice.name}</span>
+        <span className="block text-sm text-gray-400 mt-1">
+          Style: <span className="font-medium">{currentVoice.style}</span> |{" "}
+          Accent: <span className="font-medium">{currentVoice.accent}</span> |{" "}
+          Language: <span className="font-medium">{currentVoice.language}</span>
+        </span>
+      </div>
+
+      {/* Audio preview */}
       <style>
         {`
+          /* Dark mode styles for the native audio controls */
           .dark-audio::-webkit-media-controls-panel {
             background-color: #333 !important;
+            border: none !important; 
           }
           .dark-audio::-webkit-media-controls-play-button,
           .dark-audio::-webkit-media-controls-pause-button,
@@ -153,55 +158,33 @@ const VoiceSettings: React.FC<VoiceSettingsProps> = ({
           }
         `}
       </style>
+      <div className="flex justify-center mb-4">
+        <audio className="dark-audio" src={currentVoice.sample} controls />
+      </div>
 
-      {/* Top row: Navigation buttons & Voice info */}
-      <div className="flex items-center justify-between w-full">
+      {/* Voice description */}
+      <div className="text-sm text-center mb-5 px-4">
+        <strong>Brief Description:</strong> {currentVoice.name} is a{" "}
+        {currentVoice.gender} voice with a{" "}
+        {currentVoice.style.toLowerCase()} style, perfect for{" "}
+        {currentVoice.language} narration.
+      </div>
+
+      {/* Navigation buttons */}
+      <div className="flex justify-center items-center space-x-4 mb-5 ">
         <button onClick={handlePrev} className={buttonClasses}>
           <KeyboardArrowLeftIcon fontSize="small" className="mr-1" />
           Prev
         </button>
-
-        {/* Voice info in the center */}
-        <div className="flex flex-col items-center px-4 text-center">
-          <span className="text-2xl font-bold">{currentVoice.name}</span>
-          <span className="text-sm text-gray-300 mt-1">
-            Style: <span className="font-medium">{currentVoice.style}</span> |{" "}
-            Accent: <span className="font-medium">{currentVoice.accent}</span> |{" "}
-            Language: <span className="font-medium">{currentVoice.language}</span>
-          </span>
-          <audio className="mt-3 dark-audio" src={currentVoice.sample} controls />
-        </div>
-
-        <button onClick={handleNext} className={buttonClasses}>
+        <button onClick={handleNext} className={buttonClasses} >
           Next
           <KeyboardArrowRightIcon fontSize="small" className="ml-1" />
         </button>
       </div>
 
-      {/* Select Voice button */}
-      <button
-        onClick={() => {
-          onSelectVoice(currentVoice.value);
-          if (onClose) onClose(); // Close the overlay after selecting the voice
-        }}
-        className={`${buttonClasses} self-center`}
-      >
-        Select Voice
-      </button>
-
-      {/* Brief description */}
-      <div className="text-sm px-2 md:px-6">
-        <p>
-          <strong>Brief Description:</strong> {currentVoice.name} is a{" "}
-          {currentVoice.gender} voice with a{" "}
-          {currentVoice.style.toLowerCase()} style, perfect for{" "}
-          {currentVoice.language} narration.
-        </p>
-      </div>
-
       {/* Sliders */}
-      <div>
-        <label className="block mb-2 font-semibold">
+      <div className="mx-auto mb-4 text-left w-full max-w-sm">
+        <label className="block mb-1 font-semibold">
           Speed: {speed.toFixed(2)}
         </label>
         <input
@@ -214,9 +197,8 @@ const VoiceSettings: React.FC<VoiceSettingsProps> = ({
           onChange={(e) => onSpeedChange(parseFloat(e.target.value))}
         />
       </div>
-
-      <div>
-        <label className="block mb-2 font-semibold">
+      <div className="mx-auto mb-5 text-left w-full max-w-sm">
+        <label className="block mb-1 font-semibold">
           Temperature: {temperature.toFixed(2)}
         </label>
         <input
@@ -228,6 +210,19 @@ const VoiceSettings: React.FC<VoiceSettingsProps> = ({
           value={temperature}
           onChange={(e) => onTemperatureChange(parseFloat(e.target.value))}
         />
+      </div>
+
+      {/* Select Voice button */}
+      <div className="text-center">
+        <button
+          onClick={() => {
+            onSelectVoice(currentVoice.value);
+            if (onClose) onClose(); 
+          }}
+          className={buttonClasses}
+        >
+          Select Voice
+        </button>
       </div>
     </div>
   );

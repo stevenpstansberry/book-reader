@@ -27,9 +27,6 @@ export default function Home() {
   const [speed, setSpeed] = useState<number>(1);
   const [temperature, setTemperature] = useState<number>(0.7);
 
-  const [showSettings, setShowSettings] = useState(false);
-  const handleOpenSettings = () => setShowSettings(true);
-  const handleCloseSettings = () => setShowSettings(false);
 
   // Cancel ref for any ongoing operations
   const cancelRef = useRef(false);
@@ -116,8 +113,11 @@ export default function Home() {
   return (
     <div className="relative flex flex-col min-h-screen p-4">
       <h1 className="text-4xl font-bold text-blue-500 mb-8 text-center">
-        My PDF TTS Reader
+        Voice Reader for PDFs
       </h1>
+      <h2 className="text-4xl font-bold text-lime-600 mb-8 text-center">
+        Powered by PlayAI
+      </h2>
 
       <div className="flex-1 flex flex-col items-center justify-center">
         {uploading ? (
@@ -152,38 +152,21 @@ export default function Home() {
           )
         ) : (
           <>
-            <Dropzone
-              onFileUploaded={handleFileUpload}
-              onTextExtracted={handleTextExtracted}
-            />
-            <button
-              onClick={handleOpenSettings}
-              className="inline-flex items-center space-x-2 px-4 py-2 rounded-md
-                         bg-lime-600 text-white font-semibold hover:bg-lime-700
-                         transition-colors mt-4"
-            >
-              Customize Your Voice Playback
-            </button>
-          </>
-        )}
-      </div>
-
-      {showSettings && (
-        <div
-          className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
-          onClick={handleCloseSettings}
-        >
-          <VoiceSettings
+            <VoiceSettings
             selectedVoice={selectedVoice}
             onSelectVoice={setSelectedVoice}
             speed={speed}
             onSpeedChange={setSpeed}
             temperature={temperature}
             onTemperatureChange={setTemperature}
-            onClose={handleCloseSettings}
-          />
-        </div>
-      )}
+            />
+            <Dropzone
+              onFileUploaded={handleFileUpload}
+              onTextExtracted={handleTextExtracted}
+            />
+          </>
+        )}
+      </div>
     </div>
   );
 }

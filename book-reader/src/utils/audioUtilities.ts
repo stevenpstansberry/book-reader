@@ -54,13 +54,11 @@ export async function handleTextExtracted(
   const newAudioCache = { ...audioCache };
   const totalPages = Object.keys(textByPage).length;
 
-  // We'll track how many pages we've processed for progress
   let processedPages = 0;
 
   // Convert to numeric page indices
   const pageNumbers = Object.keys(textByPage).map(Number);
 
-  // Run TTS calls in parallel
   const promises = pageNumbers.map(async (pageNumber) => {
     if (cancelRef.current) return;
 
