@@ -9,9 +9,6 @@ import VoiceSettings from "../components/VoiceSettings";
 import { VOICES } from "@/components/VoiceSettings";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 
-import {
-  handleTextExtracted as handleTextExtractedUtil
-} from "../utils/audioUtilities";
 import { fetchTextToSpeech } from "@/api/API";
 
 export default function Home() {
@@ -32,9 +29,6 @@ export default function Home() {
   // Cancel ref for any ongoing operations
   const cancelRef = useRef(false);
 
-  // Voice object for display
-  const selectedVoiceObject =
-    VOICES.find((voice) => voice.value === selectedVoice) || VOICES[0];
 
   const resetProcess = () => {
     cancelRef.current = true; // stop any in-progress operations

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-// Material UI icons
 import KeyboardArrowLeftIcon from "@mui/icons-material/KeyboardArrowLeft";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
 
@@ -97,6 +96,15 @@ const VoiceSettings: React.FC<VoiceSettingsProps> = ({
 }) => {
   const [currentIndex, setCurrentIndex] = useState<number>(0);
 
+  // Preload all voice samples on component mount
+  useEffect(() => {
+    VOICES.forEach((voice) => {
+      const audio = new Audio();
+      audio.src = voice.sample;
+      audio.load();
+    });
+  }, []);
+
   useEffect(() => {
     const foundIndex = VOICES.findIndex((voice) => voice.value === selectedVoice);
     if (foundIndex >= 0) {
@@ -125,7 +133,6 @@ const VoiceSettings: React.FC<VoiceSettingsProps> = ({
       "
       onClick={(e) => e.stopPropagation()}
     >
-
       <h2 className="text-xl font-bold mb-3 text-center">Select a Voice</h2>
 
       {/* Voice name / style / accent / language */}
@@ -176,7 +183,7 @@ const VoiceSettings: React.FC<VoiceSettingsProps> = ({
           <KeyboardArrowLeftIcon fontSize="small" className="mr-1" />
           Prev
         </button>
-        <button onClick={handleNext} className={buttonClasses} >
+        <button onClick={handleNext} className={buttonClasses}>
           Next
           <KeyboardArrowRightIcon fontSize="small" className="ml-1" />
         </button>
@@ -217,7 +224,7 @@ const VoiceSettings: React.FC<VoiceSettingsProps> = ({
         <button
           onClick={() => {
             onSelectVoice(currentVoice.value);
-            if (onClose) onClose(); 
+            if (onClose) onClose();
           }}
           className={buttonClasses}
         >
