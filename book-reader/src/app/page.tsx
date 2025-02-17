@@ -120,12 +120,7 @@ export default function Home() {
             <AudioControl audioUrl={audioUrl} currentPage={currentPage} onGenerateAudio={() => generateAndCacheAudio(currentPage, pdfText[currentPage])} />
             <button
               onClick={() => {
-                setPdfUrl(null);
-                setPdfText({});
-                setAudioCache({});
-                setAudioUrl(null);
-                setCurrentPage(1);
-                setPdfName(null);
+                resetProcess()
               }}
               className="mt-4 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition"
             >
