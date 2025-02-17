@@ -166,10 +166,11 @@ export default function Home() {
             <Dropzone onFileUploaded={handleFileUpload} onTextExtracted={handleTextExtracted} />
             <button
               onClick={handleOpenSettings}
-              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-            >
+              className="inline-flex items-center space-x-2 px-4 py-2 rounded-md bg-lime-600 text-white font-semibold hover:bg-lime-700 transition-colors"
+              >
               Customize Your Voice Playback
             </button>
+
           </>
         )}
       </div>
