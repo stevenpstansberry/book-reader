@@ -6,16 +6,18 @@ import ProgressBar from "../components/ProgressBar";
 import PDFViewer from "../components/PDFViewer";
 import AudioControl from "../components/AudioControl";
 import VoiceSettings from "../components/VoiceSettings";
-import { fetchTextToSpeech } from "../api/API";
 import { VOICES } from "@/components/VoiceSettings";
+import CloudUploadIcon from "@mui/icons-material/CloudUpload";
+
+import {
+  handleTextExtracted as handleTextExtractedUtil
+} from "../utils/audioUtilities";
+import { fetchTextToSpeech } from "@/api/API";
 
 export default function Home() {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  const [pdfName, setPdfName] = useState<string | null>(null);
-  const [pdfText, setPdfText] = useState<{ [key: number]: string }>({});
   const [audioCache, setAudioCache] = useState<{ [key: number]: string }>({});
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
 
   const [uploading, setUploading] = useState<boolean>(false);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
@@ -26,9 +28,6 @@ export default function Home() {
   const [speed, setSpeed] = useState<number>(1);
   const [temperature, setTemperature] = useState<number>(0.7);
 
-  const [showSettings, setShowSettings] = useState(false);
-  const handleOpenSettings = () => setShowSettings(true);
-  const handleCloseSettings = () => setShowSettings(false);
 
   // Cancel ref for any ongoing operations
   const cancelRef = useRef(false);
@@ -40,11 +39,8 @@ export default function Home() {
   const resetProcess = () => {
     cancelRef.current = true; // stop any in-progress operations
     setPdfUrl(null);
-    setPdfText({});
     setAudioCache({});
-    setAudioUrl(null);
     setCurrentPage(1);
-    setPdfName(null);
     setUploading(false);
     setGeneratingAudio(false);
     setUploadProgress(0);
@@ -80,7 +76,6 @@ export default function Home() {
     simulateProgress(setUploadProgress, () => {
       if (!cancelRef.current) {
         setPdfUrl(fileUrl);
-        setPdfName(fileUrl.split("/").pop() || "Unknown PDF");
         setCurrentPage(1);
         setUploading(false);
       }
@@ -113,7 +108,6 @@ export default function Home() {
   const handleTextExtracted = useCallback(
     async (textByPage: { [key: number]: string }) => {
       cancelRef.current = false; // new generation in progress
-      setPdfText(textByPage);
       setGeneratingAudio(true);
       setAudioProgress(0);
 
@@ -150,20 +144,22 @@ export default function Home() {
         setAudioCache(newAudioCache);
         setGeneratingAudio(false);
 
-        // Default to page 1 audio if available
-        if (newAudioCache[1]) {
-          setAudioUrl(newAudioCache[1]);
-        }
       }
     },
     [audioCache, selectedVoice, speed, temperature]
   );
 
+  // -------------------------------
+  // RENDER
+  // -------------------------------
   return (
     <div className="relative flex flex-col min-h-screen p-4">
       <h1 className="text-4xl font-bold text-blue-500 mb-8 text-center">
-        My PDF TTS Reader
+        Voice Reader for PDFs
       </h1>
+      <h2 className="text-4xl font-bold text-lime-600 mb-8 text-center">
+        Powered by PlayAI
+      </h2>
 
       <div className="flex-1 flex flex-col items-center justify-center">
         {uploading ? (
@@ -182,52 +178,37 @@ export default function Home() {
           ) : (
             <>
               <PDFViewer fileUrl={pdfUrl} onPageChange={setCurrentPage} />
-              <AudioControl
-                audioUrl={audioUrl}
-                currentPage={currentPage}
-                onGenerateAudio={() =>
-                  fetchAndCacheAudio(currentPage, pdfText[currentPage])
-                }
-              />
+              <div className="mt-4">
+                <AudioControl audioCache={audioCache} currentPage={currentPage} />
+              </div>
               <button
                 onClick={resetProcess}
-                className="mt-4 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition"
+                className="mt-4 px-6 py-3 bg-orange-500 text-white text-lg font-semibold rounded-lg
+                           hover:bg-orange-600 transition-all duration-200 shadow-md hover:shadow-lg
+                           active:scale-95 flex items-center space-x-2"
               >
-                Upload Another PDF
+                <CloudUploadIcon className="w-5 h-5" />
+                <span>Upload Another PDF</span>
               </button>
             </>
           )
         ) : (
           <>
-            {/* Some display of current settings, etc. */}
-            <Dropzone onFileUploaded={handleFileUpload} onTextExtracted={handleTextExtracted} />
-            <button
-              onClick={handleOpenSettings}
-              className="inline-flex items-center space-x-2 px-4 py-2 rounded-md bg-lime-600 text-white font-semibold hover:bg-lime-700 transition-colors mt-4"
-            >
-              Customize Your Voice Playback
-            </button>
-          </>
-        )}
-      </div>
-
-      {/* Overlay for Voice Settings */}
-      {showSettings && (
-        <div
-          className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
-          onClick={handleCloseSettings}
-        >
-          <VoiceSettings
+            <VoiceSettings
             selectedVoice={selectedVoice}
             onSelectVoice={setSelectedVoice}
             speed={speed}
             onSpeedChange={setSpeed}
             temperature={temperature}
             onTemperatureChange={setTemperature}
-            onClose={handleCloseSettings}
-          />
-        </div>
-      )}
+            />
+            <Dropzone
+              onFileUploaded={handleFileUpload}
+              onTextExtracted={handleTextExtracted}
+            />
+          </>
+        )}
+      </div>
     </div>
   );
 }
