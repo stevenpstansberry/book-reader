@@ -12,11 +12,6 @@ export const fetchTextToSpeech = async (
   turnPrefix2?: string
 ) => {
   console.log("📤 Sending request to PlayAI TTS API...");
-  console.log("📝 Text:", text);
-  console.log("🔊 Voice 1:", voice);
-  console.log("🔊 Voice 2 (if provided):", voice2 || "None");
-  console.log("🎭 Speaker 1 Prefix:", turnPrefix || "None");
-  console.log("🎭 Speaker 2 Prefix:", turnPrefix2 || "None");
 
   try {
     const response = await axios.post(

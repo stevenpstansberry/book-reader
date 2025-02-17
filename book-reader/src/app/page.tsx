@@ -8,109 +8,117 @@ import { fetchTextToSpeech } from "../api/API";
 
 export default function Home() {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfName, setPdfName] = useState<string | null>(null);
   const [pdfText, setPdfText] = useState<{ [key: number]: string }>({});
-  const [audioCache, setAudioCache] = useState<{ [key: number]: string }>({}); // Store generated audio
-  const [currentPage, setCurrentPage] = useState<number>(1); // Store the current page
-  const [audioUrl, setAudioUrl] = useState<string | null>(null); // Current audio playing
-
-  console.log("📄 Extracted PDF Text by Page:", pdfText);
-  console.log("🔊 Cached Audio:", audioCache);
-  console.log("📑 Current Page:", currentPage);
+  const [audioCache, setAudioCache] = useState<{ [key: number]: string }>({});
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState<boolean>(false);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [generatingAudio, setGeneratingAudio] = useState<boolean>(false);
+  const [audioProgress, setAudioProgress] = useState<number>(0);
 
   // Handle file upload
   const handleFileUpload = useCallback((fileUrl: string) => {
-    console.log("📂 PDF Uploaded:", fileUrl);
-    setPdfUrl(fileUrl);
-    setCurrentPage(1); // Reset to page 1
+    setUploading(true);
+    setUploadProgress(50); // Simulating some progress
+    setTimeout(() => {
+      setPdfUrl(fileUrl);
+      setPdfName(fileUrl.split("/").pop() || "Unknown PDF");
+      setCurrentPage(1);
+      setUploadProgress(100);
+      setTimeout(() => setUploading(false), 500);
+    }, 1500);
   }, []);
 
-  // Handle text extraction and auto-generate audio for page 1
-  const handleTextExtracted = useCallback((textByPage: { [key: number]: string }) => {
-    console.log("📑 Extracted Text from PDF:", textByPage);
+  // Handle text extraction and generate audio for all pages
+  const handleTextExtracted = useCallback(async (textByPage: { [key: number]: string }) => {
     setPdfText(textByPage);
+    setGeneratingAudio(true);
+    setAudioProgress(0);
 
-    // Auto-generate audio for page 1
-    if (textByPage[1]) {
-      generateAndCacheAudio(1, textByPage[1]);
+    const newAudioCache: { [key: number]: string } = { ...audioCache };
+    const totalPages = Object.keys(textByPage).length;
+    let processedPages = 0;
+
+    for (const pageNumber in textByPage) {
+      const pageNum = Number(pageNumber);
+      if (!newAudioCache[pageNum]) {
+        try {
+          const audioUrl = await generateAndCacheAudio(pageNum, textByPage[pageNum]);
+          if (audioUrl) {
+            newAudioCache[pageNum] = audioUrl;
+          }
+        } catch (error) {
+          console.error(`❌ Error generating audio for page ${pageNum}:`, error);
+        }
+      }
+
+      processedPages++;
+      setAudioProgress(Math.round((processedPages / totalPages) * 100));
+    }
+
+    setAudioCache(newAudioCache);
+    setGeneratingAudio(false);
+
+    if (newAudioCache[1]) {
+      setAudioUrl(newAudioCache[1]);
     }
   }, []);
 
-  // Function to generate audio and store it in the cache
-  const generateAndCacheAudio = async (pageNumber: number, text: string) => {
+  const generateAndCacheAudio = async (pageNumber: number, text: string): Promise<string | null> => {
     if (audioCache[pageNumber]) {
-      console.log(`🔊 Audio already exists for page ${pageNumber}, using cache.`);
-      setAudioUrl(audioCache[pageNumber]);
-      return;
+      return audioCache[pageNumber];
     }
-
-    console.log(`🎙️ Generating Audio for Page: ${pageNumber}`);
     try {
       const voice = "s3://voice-cloning-zero-shot/baf1ef41-36b6-428c-9bdf-50ba54682bd8/original/manifest.json";
       const audioData = await fetchTextToSpeech(text, voice);
       const blob = new Blob([audioData], { type: "audio/mp3" });
-      const audioUrl = URL.createObjectURL(blob);
-
-      console.log("✅ Audio successfully generated:", audioUrl);
-      setAudioCache((prevCache) => ({
-        ...prevCache,
-        [pageNumber]: audioUrl, // Cache the audio file
-      }));
-      setAudioUrl(audioUrl);
+      return URL.createObjectURL(blob);
     } catch (error) {
-      console.error("❌ Error generating TTS:", error);
+      console.error(`❌ Error generating TTS for page ${pageNumber}:`, error);
+      return null;
     }
-  };
-
-  // Handle manual audio generation (used in AudioControl)
-  const handleGenerateAudio = async () => {
-    console.log(`🎙️ Checking audio for page ${currentPage}`);
-    if (pdfText[currentPage]) {
-      generateAndCacheAudio(currentPage, pdfText[currentPage]);
-    } else {
-      console.warn(`⚠️ No text found for page ${currentPage}`);
-    }
-  };
-
-  // Update audio when the page changes
-  useEffect(() => {
-    if (audioCache[currentPage]) {
-      setAudioUrl(audioCache[currentPage]);
-    }
-  }, [currentPage, audioCache]);
-
-  // Handle page change
-  const handlePageChange = (newPage: number) => {
-    console.log(`📄 Page changed to: ${newPage}`);
-    setCurrentPage(newPage);
-  };
-
-  // Clear function
-  const handleClear = () => {
-    console.log("🗑️ Clearing PDF and audio data...");
-    setPdfUrl(null);
-    setPdfText({});
-    setAudioCache({});
-    setAudioUrl(null);
-    setCurrentPage(1);
   };
 
   return (
     <div className="flex flex-col justify-center items-center h-screen">
-      {pdfUrl ? (
-        <>
-          <PDFViewer fileUrl={pdfUrl} onPageChange={handlePageChange} />
-          <AudioControl 
-            audioUrl={audioUrl} 
-            currentPage={currentPage} 
-            onGenerateAudio={handleGenerateAudio} 
-          />
-          <button
-            onClick={handleClear}
-            className="mt-4 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition"
-          >
-            Upload Another PDF
-          </button>
-        </>
+      {uploading ? (
+        <div className="flex flex-col items-center p-6 bg-gray-200 rounded-lg shadow-lg">
+          <p className="text-lg font-semibold mb-2">Uploading PDF...</p>
+          <p className="text-blue-600 font-bold">{uploadProgress}% Uploaded</p>
+          <div className="w-64 bg-gray-300 h-4 rounded-full mt-2">
+            <div className="bg-blue-600 h-full rounded-full transition-all" style={{ width: `${uploadProgress}%` }}></div>
+          </div>
+        </div>
+      ) : pdfUrl ? (
+        generatingAudio ? (
+          <div className="flex flex-col items-center p-6 bg-gray-200 rounded-lg shadow-lg">
+            <p className="text-lg font-semibold mb-2">{pdfName}</p>
+            <p className="text-blue-600 font-bold">{audioProgress}% Audio Processed</p>
+            <div className="w-64 bg-gray-300 h-4 rounded-full mt-2">
+              <div className="bg-blue-600 h-full rounded-full transition-all" style={{ width: `${audioProgress}%` }}></div>
+            </div>
+          </div>
+        ) : (
+          <>
+            <PDFViewer fileUrl={pdfUrl} onPageChange={setCurrentPage} />
+            <AudioControl audioUrl={audioUrl} currentPage={currentPage} onGenerateAudio={() => generateAndCacheAudio(currentPage, pdfText[currentPage])} />
+            <button
+              onClick={() => {
+                setPdfUrl(null);
+                setPdfText({});
+                setAudioCache({});
+                setAudioUrl(null);
+                setCurrentPage(1);
+                setPdfName(null);
+              }}
+              className="mt-4 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition"
+            >
+              Upload Another PDF
+            </button>
+          </>
+        )
       ) : (
         <Dropzone onFileUploaded={handleFileUpload} onTextExtracted={handleTextExtracted} />
       )}

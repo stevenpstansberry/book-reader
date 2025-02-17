@@ -66,15 +66,6 @@ export default function AudioControl({ audioUrl, currentPage, onGenerateAudio }:
   const handleSkipNext = () => {
   };
 
-  // Generate Audio for Current Page
-  const handleGenerateAudioClick = () => {
-    if (onGenerateAudio) {
-      console.log(`🎙️ Requesting Audio Generation for Page ${currentPage}`);
-      onGenerateAudio();
-    } else {
-      console.error("❌ onGenerateAudio is undefined!");
-    }
-  };
 
   return (
     <div className="flex items-center justify-center p-2 rounded-full border shadow-md bg-darkPrimary">
@@ -139,13 +130,6 @@ export default function AudioControl({ audioUrl, currentPage, onGenerateAudio }:
         />
       )}
 
-      {/* Generate Audio Button */}
-      <button
-        className="ml-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-        onClick={handleGenerateAudioClick}
-      >
-        Generate Audio
-      </button>
     </div>
   );
 }
