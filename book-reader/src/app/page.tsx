@@ -12,6 +12,7 @@ import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import {
   handleTextExtracted as handleTextExtractedUtil
 } from "../utils/audioUtilities";
+import { fetchTextToSpeech } from "@/api/API";
 
 export default function Home() {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -31,9 +32,10 @@ export default function Home() {
   // Cancel ref for any ongoing operations
   const cancelRef = useRef(false);
 
-  // -------------------------------
-  // RESET / CANCEL LOGIC
-  // -------------------------------
+  // Voice object for display
+  const selectedVoiceObject =
+    VOICES.find((voice) => voice.value === selectedVoice) || VOICES[0];
+
   const resetProcess = () => {
     cancelRef.current = true; // stop any in-progress operations
     setPdfUrl(null);
@@ -45,9 +47,6 @@ export default function Home() {
     setAudioProgress(0);
   };
 
-  // -------------------------------
-  // PROGRESS SIMULATION (for PDF upload)
-  // -------------------------------
   const simulateProgress = (
     setProgress: React.Dispatch<React.SetStateAction<number>>,
     onComplete: () => void
@@ -69,40 +68,83 @@ export default function Home() {
     }, 300);
   };
 
-  // -------------------------------
-  // PDF FILE UPLOAD
-  // -------------------------------
-  const handleFileUpload = useCallback(
-    (fileUrl: string) => {
-      resetProcess();
-      setUploading(true);
-      simulateProgress(setUploadProgress, () => {
-        if (!cancelRef.current) {
-          setPdfUrl(fileUrl);
-          setCurrentPage(1);
-          setUploading(false);
-        }
-      });
-    },
-    [resetProcess]
-  );
+  const handleFileUpload = useCallback((fileUrl: string) => {
+    // 1) Fully reset everything to clear old PDF/audio
+    resetProcess();
 
-  // -------------------------------
-  // TEXT EXTRACTION -> AUDIO TTS
-  // -------------------------------
+    setUploading(true);
+    simulateProgress(setUploadProgress, () => {
+      if (!cancelRef.current) {
+        setPdfUrl(fileUrl);
+        setCurrentPage(1);
+        setUploading(false);
+      }
+    });
+  }, []);
+
+  // The same fetch function you had
+  const fetchAndCacheAudio = async (
+    pageNumber: number,
+    text: string
+  ): Promise<string | null> => {
+    if (cancelRef.current) return null;
+    // If we already have a cached audio for this page, return it
+    if (audioCache[pageNumber]) {
+      return audioCache[pageNumber];
+    }
+    try {
+      const audioData = await fetchTextToSpeech(text, selectedVoice, speed, temperature);
+      if (cancelRef.current) return null;
+
+      const blob = new Blob([audioData], { type: "audio/mp3" });
+      return URL.createObjectURL(blob);
+    } catch (error) {
+      console.error(`Error generating TTS for page ${pageNumber}:`, error);
+      return null;
+    }
+  };
+
+  // Modified handleTextExtracted to do parallel requests
   const handleTextExtracted = useCallback(
     async (textByPage: { [key: number]: string }) => {
-      await handleTextExtractedUtil(
-        Object.values(textByPage),
-        cancelRef,
-        setGeneratingAudio,
-        setAudioProgress,
-        audioCache,
-        setAudioCache,
-        selectedVoice,
-        speed,
-        temperature
-      );
+      cancelRef.current = false; // new generation in progress
+      setGeneratingAudio(true);
+      setAudioProgress(0);
+
+      const newAudioCache: { [key: number]: string } = { ...audioCache };
+      const totalPages = Object.keys(textByPage).length;
+
+      // We'll track how many pages we've processed for progress
+      let processedPages = 0;
+
+      // Collect all page numbers that need audio
+      const pageNumbers = Object.keys(textByPage).map(Number);
+
+      // Create array of promises to generate each page in parallel
+      const promises = pageNumbers.map(async (pageNumber) => {
+        if (cancelRef.current) return; // if canceled, stop
+
+        // Only fetch if not cached
+        if (!newAudioCache[pageNumber]) {
+          const audioUrl = await fetchAndCacheAudio(pageNumber, textByPage[pageNumber]);
+          if (!cancelRef.current && audioUrl) {
+            newAudioCache[pageNumber] = audioUrl;
+          }
+        }
+        // Increment progress after finishing this page
+        processedPages++;
+        setAudioProgress(Math.round((processedPages / totalPages) * 100));
+      });
+
+      // Wait for all fetches to complete
+      await Promise.all(promises);
+
+      // If we haven't canceled, finalize
+      if (!cancelRef.current) {
+        setAudioCache(newAudioCache);
+        setGeneratingAudio(false);
+
+      }
     },
     [audioCache, selectedVoice, speed, temperature]
   );
