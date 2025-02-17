@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import Dropzone from "../components/Dropzone";
 import ProgressBar from "../components/ProgressBar";
 import PDFViewer from "../components/PDFViewer";
@@ -26,16 +26,19 @@ export default function Home() {
   const [speed, setSpeed] = useState<number>(1);
   const [temperature, setTemperature] = useState<number>(0.7);
 
-  // Control the overlay for VoiceSettings
   const [showSettings, setShowSettings] = useState(false);
   const handleOpenSettings = () => setShowSettings(true);
   const handleCloseSettings = () => setShowSettings(false);
 
-  // Find the selected voice object for display
+  // Cancel ref for any ongoing operations
+  const cancelRef = useRef(false);
+
+  // Voice object for display
   const selectedVoiceObject =
     VOICES.find((voice) => voice.value === selectedVoice) || VOICES[0];
 
   const resetProcess = () => {
+    cancelRef.current = true; // stop any in-progress operations
     setPdfUrl(null);
     setPdfText({});
     setAudioCache({});
@@ -53,7 +56,12 @@ export default function Home() {
     onComplete: () => void
   ) => {
     let progress = 0;
+    cancelRef.current = false; // reset cancellation on new start
     const interval = setInterval(() => {
+      if (cancelRef.current) {
+        clearInterval(interval);
+        return;
+      }
       progress += Math.floor(Math.random() * 10) + 5;
       if (progress >= 100) {
         progress = 100;
@@ -65,12 +73,17 @@ export default function Home() {
   };
 
   const handleFileUpload = useCallback((fileUrl: string) => {
+    // 1) Fully reset everything to clear old PDF/audio
+    resetProcess();
+
     setUploading(true);
     simulateProgress(setUploadProgress, () => {
-      setPdfUrl(fileUrl);
-      setPdfName(fileUrl.split("/").pop() || "Unknown PDF");
-      setCurrentPage(1);
-      setUploading(false);
+      if (!cancelRef.current) {
+        setPdfUrl(fileUrl);
+        setPdfName(fileUrl.split("/").pop() || "Unknown PDF");
+        setCurrentPage(1);
+        setUploading(false);
+      }
     });
   }, []);
 
@@ -78,11 +91,15 @@ export default function Home() {
     pageNumber: number,
     text: string
   ): Promise<string | null> => {
+    if (cancelRef.current) return null;
+    // If we already have a cached audio for this page, return it
     if (audioCache[pageNumber]) {
       return audioCache[pageNumber];
     }
     try {
       const audioData = await fetchTextToSpeech(text, selectedVoice, speed, temperature);
+      if (cancelRef.current) return null;
+
       const blob = new Blob([audioData], { type: "audio/mp3" });
       return URL.createObjectURL(blob);
     } catch (error) {
@@ -93,6 +110,7 @@ export default function Home() {
 
   const handleTextExtracted = useCallback(
     async (textByPage: { [key: number]: string }) => {
+      cancelRef.current = false; // new generation in progress
       setPdfText(textByPage);
       setGeneratingAudio(true);
       setAudioProgress(0);
@@ -102,26 +120,27 @@ export default function Home() {
       let processedPages = 0;
 
       for (const pageNumberStr in textByPage) {
+        if (cancelRef.current) break;
+
         const pageNumber = Number(pageNumberStr);
         if (!newAudioCache[pageNumber]) {
-          try {
-            const audioUrl = await fetchAndCacheAudio(pageNumber, textByPage[pageNumber]);
-            if (audioUrl) {
-              newAudioCache[pageNumber] = audioUrl;
-            }
-          } catch (error) {
-            console.error(`Error generating audio for page ${pageNumber}:`, error);
+          const audioUrl = await fetchAndCacheAudio(pageNumber, textByPage[pageNumber]);
+          if (!cancelRef.current && audioUrl) {
+            newAudioCache[pageNumber] = audioUrl;
           }
         }
         processedPages++;
         setAudioProgress(Math.round((processedPages / totalPages) * 100));
       }
 
-      setAudioCache(newAudioCache);
-      setGeneratingAudio(false);
+      if (!cancelRef.current) {
+        setAudioCache(newAudioCache);
+        setGeneratingAudio(false);
 
-      if (newAudioCache[1]) {
-        setAudioUrl(newAudioCache[1]);
+        // Default to page 1 audio if available
+        if (newAudioCache[1]) {
+          setAudioUrl(newAudioCache[1]);
+        }
       }
     },
     [audioCache, selectedVoice, speed, temperature]
@@ -153,9 +172,7 @@ export default function Home() {
               <AudioControl
                 audioUrl={audioUrl}
                 currentPage={currentPage}
-                onGenerateAudio={() =>
-                  fetchAndCacheAudio(currentPage, pdfText[currentPage])
-                }
+                onGenerateAudio={() => fetchAndCacheAudio(currentPage, pdfText[currentPage])}
               />
               <button
                 onClick={resetProcess}
@@ -167,34 +184,27 @@ export default function Home() {
           )
         ) : (
           <>
-            {/* 
-              Instead of a box, we display "chips" or "badges" for each setting. 
-              Use a flex container, and each setting is an inline-flex badge. 
-            */}
+            {/* Currently selected voice settings in "chip" style */}
             <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
-              {/* Voice */}
               <div className="inline-flex items-center bg-lime-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
                 Voice: {selectedVoiceObject.name}
               </div>
-              {/* Accent */}
               <div className="inline-flex items-center bg-lime-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
                 Accent: {selectedVoiceObject.accent}
               </div>
-              {/* Language */}
               <div className="inline-flex items-center bg-lime-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
                 Language: {selectedVoiceObject.language}
               </div>
-              {/* Speed */}
               <div className="inline-flex items-center bg-lime-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
                 Speed: {speed.toFixed(2)}
               </div>
-              {/* Temperature */}
               <div className="inline-flex items-center bg-lime-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
                 Temperature: {temperature.toFixed(2)}
               </div>
             </div>
 
             <Dropzone onFileUploaded={handleFileUpload} onTextExtracted={handleTextExtracted} />
+
             <button
               onClick={handleOpenSettings}
               className="inline-flex items-center space-x-2 px-4 py-2 rounded-md bg-lime-600 text-white font-semibold hover:bg-lime-700 transition-colors mt-4"
