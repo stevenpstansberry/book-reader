@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback } from "react";
 import Dropzone from "../components/Dropzone";
 import ProgressBar from "../components/ProgressBar";
 import PDFViewer from "../components/PDFViewer";
@@ -9,9 +9,9 @@ import VoiceSettings from "../components/VoiceSettings";
 import { fetchTextToSpeech } from "../api/API";
 import { VOICES } from "@/components/VoiceSettings";
 
-// MUI imports for the settings icon and modal
-import { IconButton, Modal, Box } from "@mui/material";
-import SettingsIcon from "@mui/icons-material/Settings";
+// You can remove these if you're not using MUI's Modal anymore:
+// import { IconButton, Modal, Box } from "@mui/material";
+// import SettingsIcon from "@mui/icons-material/Settings";
 
 export default function Home() {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -30,7 +30,7 @@ export default function Home() {
   const [speed, setSpeed] = useState<number>(1);
   const [temperature, setTemperature] = useState<number>(0.7);
 
-  // Control the modal for VoiceSettings
+  // Control the overlay for VoiceSettings
   const [showSettings, setShowSettings] = useState(false);
   const handleOpenSettings = () => setShowSettings(true);
   const handleCloseSettings = () => setShowSettings(false);
@@ -74,7 +74,7 @@ export default function Home() {
     });
   }, []);
 
-  const generateAndCacheAudio = async (
+  const fetchAndCacheAudio = async (
     pageNumber: number,
     text: string
   ): Promise<string | null> => {
@@ -101,16 +101,16 @@ export default function Home() {
       const totalPages = Object.keys(textByPage).length;
       let processedPages = 0;
 
-      for (const pageNumber in textByPage) {
-        const pageNum = Number(pageNumber);
-        if (!newAudioCache[pageNum]) {
+      for (const pageNumberStr in textByPage) {
+        const pageNumber = Number(pageNumberStr);
+        if (!newAudioCache[pageNumber]) {
           try {
-            const audioUrl = await generateAndCacheAudio(pageNum, textByPage[pageNum]);
+            const audioUrl = await fetchAndCacheAudio(pageNumber, textByPage[pageNumber]);
             if (audioUrl) {
-              newAudioCache[pageNum] = audioUrl;
+              newAudioCache[pageNumber] = audioUrl;
             }
           } catch (error) {
-            console.error(`Error generating audio for page ${pageNum}:`, error);
+            console.error(`Error generating audio for page ${pageNumber}:`, error);
           }
         }
         processedPages++;
@@ -128,7 +128,13 @@ export default function Home() {
   );
 
   return (
-    <div className="relative flex flex-col justify-center items-center h-screen p-4">
+    <div className="relative flex flex-col items-center min-h-screen p-4">
+      {/* --- Stylized Title at the Top --- */}
+      <h1 className="text-4xl font-bold text-blue-500 mb-8">
+        My PDF TTS Reader
+      </h1>
+      {/* --- End Title --- */}
+
       {uploading ? (
         <ProgressBar
           label="Uploading PDF..."
@@ -138,7 +144,7 @@ export default function Home() {
       ) : pdfUrl ? (
         generatingAudio ? (
           <ProgressBar
-            label="Generating Audio"
+            label="Generating Audio..."
             progress={audioProgress}
             onCancel={resetProcess}
           />
@@ -148,7 +154,7 @@ export default function Home() {
             <AudioControl
               audioUrl={audioUrl}
               currentPage={currentPage}
-              onGenerateAudio={() => generateAndCacheAudio(currentPage, pdfText[currentPage])}
+              onGenerateAudio={() => fetchAndCacheAudio(currentPage, pdfText[currentPage])}
             />
             <button
               onClick={resetProcess}
@@ -169,11 +175,13 @@ export default function Home() {
           </button>
         </>
       )}
-  
-      <Modal open={showSettings} onClose={handleCloseSettings}>
-        <Box
-          className="absolute top-[50%] left-[50%] bg-white rounded p-4"
-          style={{ transform: "translate(-50%, -50%)" }}
+
+      {/* --- Overlay Card for Settings --- */}
+      {showSettings && (
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50"
+          // Clicking the backdrop closes the modal
+          onClick={handleCloseSettings}
         >
           <VoiceSettings
             selectedVoice={selectedVoice}
@@ -183,8 +191,11 @@ export default function Home() {
             temperature={temperature}
             onTemperatureChange={setTemperature}
           />
-        </Box>
-      </Modal>
+        </div>
+      )}
+
+
+
     </div>
   );
 }
