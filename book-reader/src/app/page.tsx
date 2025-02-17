@@ -9,10 +9,6 @@ import VoiceSettings from "../components/VoiceSettings";
 import { fetchTextToSpeech } from "../api/API";
 import { VOICES } from "@/components/VoiceSettings";
 
-// You can remove these if you're not using MUI's Modal anymore:
-// import { IconButton, Modal, Box } from "@mui/material";
-// import SettingsIcon from "@mui/icons-material/Settings";
-
 export default function Home() {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfName, setPdfName] = useState<string | null>(null);
@@ -128,59 +124,59 @@ export default function Home() {
   );
 
   return (
-    <div className="relative flex flex-col items-center min-h-screen p-4">
-      {/* --- Stylized Title at the Top --- */}
-      <h1 className="text-4xl font-bold text-blue-500 mb-8">
+    <div className="relative flex flex-col min-h-screen p-4">
+      <h1 className="text-4xl font-bold text-blue-500 mb-8 text-center">
         My PDF TTS Reader
       </h1>
-      {/* --- End Title --- */}
 
-      {uploading ? (
-        <ProgressBar
-          label="Uploading PDF..."
-          progress={uploadProgress}
-          onCancel={resetProcess}
-        />
-      ) : pdfUrl ? (
-        generatingAudio ? (
+      <div className="flex-1 flex flex-col items-center justify-center">
+        {uploading ? (
           <ProgressBar
-            label="Generating Audio..."
-            progress={audioProgress}
+            label="Uploading PDF..."
+            progress={uploadProgress}
             onCancel={resetProcess}
           />
+        ) : pdfUrl ? (
+          generatingAudio ? (
+            <ProgressBar
+              label="Generating Audio..."
+              progress={audioProgress}
+              onCancel={resetProcess}
+            />
+          ) : (
+            <>
+              <PDFViewer fileUrl={pdfUrl} onPageChange={setCurrentPage} />
+              <AudioControl
+                audioUrl={audioUrl}
+                currentPage={currentPage}
+                onGenerateAudio={() =>
+                  fetchAndCacheAudio(currentPage, pdfText[currentPage])
+                }
+              />
+              <button
+                onClick={resetProcess}
+                className="mt-4 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition"
+              >
+                Upload Another PDF
+              </button>
+            </>
+          )
         ) : (
           <>
-            <PDFViewer fileUrl={pdfUrl} onPageChange={setCurrentPage} />
-            <AudioControl
-              audioUrl={audioUrl}
-              currentPage={currentPage}
-              onGenerateAudio={() => fetchAndCacheAudio(currentPage, pdfText[currentPage])}
-            />
+            <Dropzone onFileUploaded={handleFileUpload} onTextExtracted={handleTextExtracted} />
             <button
-              onClick={resetProcess}
-              className="mt-4 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition"
+              onClick={handleOpenSettings}
+              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
             >
-              Upload Another PDF
+              Customize Your Voice Playback
             </button>
           </>
-        )
-      ) : (
-        <>
-          <Dropzone onFileUploaded={handleFileUpload} onTextExtracted={handleTextExtracted} />
-          <button
-            onClick={handleOpenSettings}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-          >
-            Customize Your Voice Playback
-          </button>
-        </>
-      )}
+        )}
+      </div>
 
-      {/* --- Overlay Card for Settings --- */}
       {showSettings && (
         <div
-          className="fixed inset-0 flex items-center justify-center z-50"
-          // Clicking the backdrop closes the modal
+          className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
           onClick={handleCloseSettings}
         >
           <VoiceSettings
@@ -190,12 +186,10 @@ export default function Home() {
             onSpeedChange={setSpeed}
             temperature={temperature}
             onTemperatureChange={setTemperature}
+            onClose={handleCloseSettings} // Pass the close function
           />
         </div>
       )}
-
-
-
     </div>
   );
 }

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 // Material UI icons
 import KeyboardArrowLeftIcon from "@mui/icons-material/KeyboardArrowLeft";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
+import CloseIcon from "@mui/icons-material/Close";
 
 interface VoiceSettingsProps {
   selectedVoice: string;
@@ -10,6 +11,7 @@ interface VoiceSettingsProps {
   onSpeedChange: (speed: number) => void;
   temperature: number;
   onTemperatureChange: (temp: number) => void;
+  onClose?: () => void;
 }
 
 export const VOICES = [
@@ -18,7 +20,8 @@ export const VOICES = [
     accent: "american",
     language: "English (US)",
     languageCode: "EN-US",
-    value: "s3://voice-cloning-zero-shot/baf1ef41-36b6-428c-9bdf-50ba54682bd8/original/manifest.json",
+    value:
+      "s3://voice-cloning-zero-shot/baf1ef41-36b6-428c-9bdf-50ba54682bd8/original/manifest.json",
     sample:
       "https://peregrine-samples.s3.us-east-1.amazonaws.com/parrot-samples/Angelo_Sample.wav",
     gender: "male",
@@ -43,7 +46,8 @@ export const VOICES = [
     languageCode: "EN-US",
     value:
       "s3://voice-cloning-zero-shot/801a663f-efd0-4254-98d0-5c175514c3e8/jennifer/manifest.json",
-    sample: "https://peregrine-samples.s3.amazonaws.com/parrot-samples/jennifer.wav",
+    sample:
+      "https://peregrine-samples.s3.amazonaws.com/parrot-samples/jennifer.wav",
     gender: "female",
     style: "Conversational",
   },
@@ -66,13 +70,14 @@ export const VOICES = [
     languageCode: "EN-US",
     value:
       "s3://voice-cloning-zero-shot/90217770-a480-4a91-b1ea-df00f4d4c29d/original/manifest.json",
-    sample: "https://parrot-samples.s3.amazonaws.com/gargamel/Samara.wav",
+    sample:
+      "https://parrot-samples.s3.amazonaws.com/gargamel/Samara.wav",
     gender: "female",
     style: "Conversational",
   },
 ];
 
-// A shared set of classes so all buttons match exactly
+// Shared button classes for consistency
 const buttonClasses = `
   px-4 py-2
   bg-lime-500 hover:bg-lime-600
@@ -89,6 +94,7 @@ const VoiceSettings: React.FC<VoiceSettingsProps> = ({
   onSpeedChange,
   temperature,
   onTemperatureChange,
+  onClose,
 }) => {
   const [currentIndex, setCurrentIndex] = useState<number>(0);
 
@@ -112,13 +118,23 @@ const VoiceSettings: React.FC<VoiceSettingsProps> = ({
   return (
     <div
       className="
-        p-6 w-full max-w-xl
+        relative p-6 w-full max-w-xl
         bg-gray-800 text-gray-100
         flex flex-col space-y-4
         rounded-md shadow-lg
       "
       onClick={(e) => e.stopPropagation()}
     >
+      {/* Top left cancel icon */}
+      {onClose && (
+        <button
+          onClick={onClose}
+          className="absolute top-2 left-2 text-gray-100 hover:text-gray-300"
+        >
+          <CloseIcon fontSize="small" />
+        </button>
+      )}
+
       {/* Custom dark-mode styles for the audio element */}
       <style>
         {`
@@ -162,7 +178,7 @@ const VoiceSettings: React.FC<VoiceSettingsProps> = ({
         </button>
       </div>
 
-      {/* Select Voice button (same style, plus self-center) */}
+      {/* Select Voice button */}
       <button
         onClick={() => onSelectVoice(currentVoice.value)}
         className={`${buttonClasses} self-center`}
