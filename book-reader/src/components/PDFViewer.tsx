@@ -7,10 +7,11 @@ import "@react-pdf-viewer/core/lib/styles/index.css";
 import "@react-pdf-viewer/default-layout/lib/styles/index.css";
 
 interface PDFViewerProps {
-  fileUrl: string;
-}
+    fileUrl: string;
+    onPageChange: (page: number) => void; // Callback to notify Home.tsx of page change
+  }
 
-const renderToolbar = (Toolbar: (props: ToolbarProps) => ReactElement) => (
+const renderToolbar = (Toolbar: (props: ToolbarProps) => ReactElement, onPageChange: (page: number) => void) => (
     <Toolbar>
         {(slots: ToolbarSlot) => {
             const {
@@ -93,12 +94,11 @@ const renderToolbar = (Toolbar: (props: ToolbarProps) => ReactElement) => (
 
 
 
-function PDFViewer({ fileUrl }: PDFViewerProps) {
-  // Create the default layout plugin instance
-  const defaultLayoutPluginInstance = defaultLayoutPlugin({
-    sidebarTabs: (defaultTabs) => [],
-    renderToolbar,
-});
+function PDFViewer({ fileUrl, onPageChange }: PDFViewerProps) {
+    const defaultLayoutPluginInstance = defaultLayoutPlugin({
+      sidebarTabs: () => [],
+      renderToolbar: (Toolbar) => renderToolbar(Toolbar, onPageChange),
+    });
   return (
     <div className="w-full max-w-3xl">
       <div style={{ height: "750px" }}>
@@ -106,6 +106,7 @@ function PDFViewer({ fileUrl }: PDFViewerProps) {
           <Viewer
             fileUrl={fileUrl}
             plugins={[defaultLayoutPluginInstance]}
+            onPageChange={(e) => onPageChange(e.currentPage + 1)}
             transformGetDocumentParams={(options) =>
               Object.assign({}, options, {
                 cMapUrl: "https://unpkg.com/pdfjs-dist@3.11.174/cmaps/",
