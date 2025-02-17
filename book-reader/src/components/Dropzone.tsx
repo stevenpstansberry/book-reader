@@ -14,14 +14,23 @@ function Dropzone({ onFileUploaded, onTextExtracted }: DropzoneProps) {
   const [uploadSuccess, setUploadSuccess] = useState<boolean>(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
-  const [isExtractingText, setIsExtractingText] = useState<boolean>(false); // New state for text extraction
+  const [isExtractingText, setIsExtractingText] = useState<boolean>(false);
 
   const onDrop = useCallback(
-    async (acceptedFiles: Blob[]) => {
+    async (acceptedFiles: Blob[], rejectedFiles: any[]) => {
       setUploadSuccess(false);
       setUploadError(null);
       setUploadProgress(0);
-      setIsExtractingText(false); // Reset extraction state
+      setIsExtractingText(false);
+
+      if (rejectedFiles.length > 0) {
+        if (rejectedFiles[0].file.size > 52428800) {
+          setUploadError("File too big: Maximum size is 50MB.");
+        } else {
+          setUploadError("Invalid file type: only PDF is accepted.");
+        }
+        return;
+      }
 
       const file = acceptedFiles[0];
       if (!file) return;
@@ -31,13 +40,17 @@ function Dropzone({ onFileUploaded, onTextExtracted }: DropzoneProps) {
         return;
       }
 
-      // Create an object URL for viewing the PDF
+      if (file.size > 52428800) {
+        setUploadError("File too big: Maximum size is 50MB.");
+        return;
+      }
+
       const fileUrl = URL.createObjectURL(file);
       onFileUploaded(fileUrl);
-      setUploadProgress(100); // Indicate file processing is done
+      setUploadProgress(100);
 
       try {
-        setIsExtractingText(true); // Start extraction spinner
+        setIsExtractingText(true);
         const textByPage = await extractTextFromPDF(file as File);
         onTextExtracted(textByPage);
         setUploadSuccess(true);
@@ -45,7 +58,7 @@ function Dropzone({ onFileUploaded, onTextExtracted }: DropzoneProps) {
         console.error("Text extraction failed", error);
         setUploadError("Failed to extract text from PDF.");
       } finally {
-        setIsExtractingText(false); // Stop extraction spinner
+        setIsExtractingText(false);
       }
     },
     [onFileUploaded, onTextExtracted]
@@ -54,7 +67,7 @@ function Dropzone({ onFileUploaded, onTextExtracted }: DropzoneProps) {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: { "application/pdf": [] },
-    maxSize: 52428800, // 50MB
+    maxSize: 52428800,
     multiple: false,
   });
 
@@ -82,14 +95,12 @@ function Dropzone({ onFileUploaded, onTextExtracted }: DropzoneProps) {
         <span>Upload file</span>
       </button>
 
-      {/* Show progress bar when file is being read */}
       {uploadProgress > 0 && uploadProgress < 100 && (
         <div className="w-full max-w-sm bg-gray-700 rounded mt-4">
           <div className="bg-lime-600 h-2 rounded" style={{ width: `${uploadProgress}%` }} />
         </div>
       )}
 
-      {/* Show a spinner while text extraction is happening */}
       {isExtractingText && (
         <div className="mt-4 flex items-center space-x-2 text-lime-400">
           <div className="animate-spin h-5 w-5 border-4 border-l-transparent border-green-500 rounded-full"></div>

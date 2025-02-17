@@ -12,6 +12,7 @@ export const fetchTextToSpeech = async (
   turnPrefix2?: string
 ) => {
   console.log("📤 Sending request to PlayAI TTS API...");
+  console.log("📝 Text:", text);
 
   try {
     const response = await axios.post(
