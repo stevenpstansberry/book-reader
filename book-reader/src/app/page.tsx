@@ -19,6 +19,19 @@ export default function Home() {
   const [generatingAudio, setGeneratingAudio] = useState<boolean>(false);
   const [audioProgress, setAudioProgress] = useState<number>(0);
 
+  const resetProcess = () => {
+    setPdfUrl(null);
+    setPdfText({});
+    setAudioCache({});
+    setAudioUrl(null);
+    setCurrentPage(1);
+    setPdfName(null);
+    setUploading(false);
+    setGeneratingAudio(false);
+    setUploadProgress(0);
+    setAudioProgress(0);
+  };
+
   // Incremental progress function
   const simulateProgress = (setProgress: React.Dispatch<React.SetStateAction<number>>, onComplete: () => void) => {
     let progress = 0;
@@ -97,10 +110,10 @@ export default function Home() {
   return (
     <div className="flex flex-col justify-center items-center h-screen">
       {uploading ? (
-        <ProgressBar label="Uploading PDF..." progress={uploadProgress} />
+        <ProgressBar label="Uploading PDF..." progress={uploadProgress} onCancel={resetProcess} />
       ) : pdfUrl ? (
         generatingAudio ? (
-          <ProgressBar label={`Generating Audio for ${pdfName}`} progress={audioProgress} />
+          <ProgressBar label={`Generating Audio`} progress={audioProgress} onCancel={resetProcess}/>
         ) : (
           <>
             <PDFViewer fileUrl={pdfUrl} onPageChange={setCurrentPage} />
