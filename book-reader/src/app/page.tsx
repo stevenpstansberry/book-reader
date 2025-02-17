@@ -87,6 +87,7 @@ export default function Home() {
     });
   }, []);
 
+  // The same fetch function you had
   const fetchAndCacheAudio = async (
     pageNumber: number,
     text: string
@@ -108,6 +109,7 @@ export default function Home() {
     }
   };
 
+  // Modified handleTextExtracted to do parallel requests
   const handleTextExtracted = useCallback(
     async (textByPage: { [key: number]: string }) => {
       cancelRef.current = false; // new generation in progress
@@ -117,22 +119,33 @@ export default function Home() {
 
       const newAudioCache: { [key: number]: string } = { ...audioCache };
       const totalPages = Object.keys(textByPage).length;
+
+      // We'll track how many pages we've processed for progress
       let processedPages = 0;
 
-      for (const pageNumberStr in textByPage) {
-        if (cancelRef.current) break;
+      // Collect all page numbers that need audio
+      const pageNumbers = Object.keys(textByPage).map(Number);
 
-        const pageNumber = Number(pageNumberStr);
+      // Create array of promises to generate each page in parallel
+      const promises = pageNumbers.map(async (pageNumber) => {
+        if (cancelRef.current) return; // if canceled, stop
+
+        // Only fetch if not cached
         if (!newAudioCache[pageNumber]) {
           const audioUrl = await fetchAndCacheAudio(pageNumber, textByPage[pageNumber]);
           if (!cancelRef.current && audioUrl) {
             newAudioCache[pageNumber] = audioUrl;
           }
         }
+        // Increment progress after finishing this page
         processedPages++;
         setAudioProgress(Math.round((processedPages / totalPages) * 100));
-      }
+      });
 
+      // Wait for all fetches to complete
+      await Promise.all(promises);
+
+      // If we haven't canceled, finalize
       if (!cancelRef.current) {
         setAudioCache(newAudioCache);
         setGeneratingAudio(false);
@@ -172,7 +185,9 @@ export default function Home() {
               <AudioControl
                 audioUrl={audioUrl}
                 currentPage={currentPage}
-                onGenerateAudio={() => fetchAndCacheAudio(currentPage, pdfText[currentPage])}
+                onGenerateAudio={() =>
+                  fetchAndCacheAudio(currentPage, pdfText[currentPage])
+                }
               />
               <button
                 onClick={resetProcess}
@@ -184,27 +199,8 @@ export default function Home() {
           )
         ) : (
           <>
-            {/* Currently selected voice settings in "chip" style */}
-            <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
-              <div className="inline-flex items-center bg-lime-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
-                Voice: {selectedVoiceObject.name}
-              </div>
-              <div className="inline-flex items-center bg-lime-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
-                Accent: {selectedVoiceObject.accent}
-              </div>
-              <div className="inline-flex items-center bg-lime-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
-                Language: {selectedVoiceObject.language}
-              </div>
-              <div className="inline-flex items-center bg-lime-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
-                Speed: {speed.toFixed(2)}
-              </div>
-              <div className="inline-flex items-center bg-lime-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
-                Temperature: {temperature.toFixed(2)}
-              </div>
-            </div>
-
+            {/* Some display of current settings, etc. */}
             <Dropzone onFileUploaded={handleFileUpload} onTextExtracted={handleTextExtracted} />
-
             <button
               onClick={handleOpenSettings}
               className="inline-flex items-center space-x-2 px-4 py-2 rounded-md bg-lime-600 text-white font-semibold hover:bg-lime-700 transition-colors mt-4"
