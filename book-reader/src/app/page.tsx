@@ -63,7 +63,6 @@ export default function Home() {
   };
 
   const handleFileUpload = useCallback((fileUrl: string) => {
-    // 1) Fully reset everything to clear old PDF/audio
     resetProcess();
 
     setUploading(true);
@@ -76,7 +75,7 @@ export default function Home() {
     });
   }, []);
 
-  // The same fetch function you had
+  // The fetch function
   const fetchAndCacheAudio = async (
     pageNumber: number,
     text: string
