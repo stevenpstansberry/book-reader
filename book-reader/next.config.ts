@@ -12,6 +12,11 @@ const nextConfig = {
     }
     return config;
   },
+  experimental: {
+    turbo: {
+      enabled: false, 
+    },
+  },
 };
 
 module.exports = nextConfig;
